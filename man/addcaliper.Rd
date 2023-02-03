@@ -2,10 +2,10 @@
 \alias{addcaliper}
 \title{Add a caliper, that need not be symmetric, to a distance object.}
 \usage{
-addcaliper(dist, z, dx, rg, stdev = FALSE, penalty = 1000)
+addcaliper(dist, z, dx, rg, stdev = FALSE, penalty = 1000, constant = TRUE)
 }
 \arguments{
-\item{dist}{ A distance object with three components: d, start, end, typically created by maha_dense or maha_sparse. d[i] gives the distance between the (start[i])th treated and the (end[i]-sum(z))th control.}
+\item{dist}{ A distance matrix or a distance object with three components: d, start, end, typically created by maha_dense or maha_sparse. d[i] gives the distance between the (start[i])th treated and the (end[i]-sum(z))th control.}
 \item{z}{ A vector whose ith coordinate is 1 for a treated unit and is 0 for a control.  Must have
 treated subjects (z=1) before controls (z=0).}
 \item{dx}{ A vector of with length(z)=length(dx) giving the variable used to define the caliper.  For instance,
@@ -13,13 +13,14 @@ dx might be the propensity score.}
 \item{rg}{ A vector with length(rg)=2 such that rg[1] <= 0 <= rg[2].  If the treated-minus-control
 difference in dx is < rg[1] or > rg[2], then penalty is added to the distance.  If treated individuals
 have dx higher than controls, then you want to set rg[2] < -rg[1], so that you tolerate smaller
-positive differences and larger negative differences.}
+positive differences and larger negative differences. If the user only specify one value for rg, assume the range is symmetric that rg[1]=-abs(rg) and rg[2]=abs(rg).}
 \item{stdev}{ If stdev = TRUE, rg is interpreted in units of an equally weighted pooled
 standard deviation; that is,rg is replaced by rg*sp where sp is
 sqrt((var(dx[z==1])+var(dx[z==0]))/2).}
 \item{penalty}{ The number added to a distance when the caliper is violated.  A large penalty,
 like the default value of penalty = 1000, will try to enforce the caliper to the extent that this
 is feasible.  Small penalties can slightly tilt a match in a desired direction. }
+\item{constant}{ An indicator to denote whether the same penalty is used for all violations of the caliper or the penalty is proportional to the scale of deviations from the caliper. }
 }
 \value{ Returns a new distance object whose distance component d is updated by the sum of d and the penalties for caliper violations.}
 \description{

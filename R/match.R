@@ -18,6 +18,19 @@ match<-function(z,dist,dat,p=rep(1,length(z)),exact=NULL,fine=rep(1,length(z)),n
 
   stopifnot(length(z)==(dim(dat)[1]))
 
+  if (is.matrix(dist)){
+    distance<-t(dist)
+    dim(distance)<-c(1,ntreat*ncontr)
+    distance<-as.vector(distance)
+    start<-rep(1:ntreat,each=ncontr)
+    end<-rep((ntreat+1):n,ntreat)
+    d0<-distance
+    distance<-distance[which(d0<Inf)]
+    start<-start[which(d0<Inf)]
+    end<-end[which(d0<Inf)]
+    dist=list(d=distance,start=start,end=end)
+  }
+
   if (!is.null(subX)){
     if (is.factor(subX)){
       levels(subX)<-1:nlevels(subX)
@@ -56,29 +69,54 @@ match<-function(z,dist,dat,p=rep(1,length(z)),exact=NULL,fine=rep(1,length(z)),n
   net<-net(z,dist,ncontrol,fine,penalty,s.cost,subX)
   if (any(net$cost==Inf)) net$cost[net$cost==Inf]<-2*max(net$cost[net$cost!=Inf])
 
-  callrelax <- function (net) {
-    if (!requireNamespace("optmatch", quietly = TRUE)) {
-      stop('Error: package optmatch (>= 0.9-1) not loaded.  To run rcbalance command, you must install optmatch first and agree to the terms of its license.')
-    }
+  callrelax <- function (net, solver = 'rlemon'){
     startn <- net$startn
     endn <- net$endn
     ucap <- net$ucap
     b <- net$b
     cost <- net$cost
+    stopifnot(length(startn) == length(endn))
+    stopifnot(length(startn) == length(ucap))
+    stopifnot(length(startn) == length(cost))
+    stopifnot(min(c(startn, endn)) >= 1)
+    stopifnot(max(c(startn, endn)) <= length(b))
+    stopifnot(all(startn != endn))
+
     nnodes <- length(b)
-    my.expr <- parse(text = '.Fortran("relaxalg", nnodes, as.integer(length(startn)),
-                     as.integer(startn), as.integer(endn), as.integer(cost),
-                     as.integer(ucap), as.integer(b), x1 = integer(length(startn)),
-                     crash1 = as.integer(0), large1 = as.integer(.Machine$integer.max/4),
-                     feasible1 = integer(1), NAOK = FALSE, DUP = TRUE, PACKAGE = "optmatch")')
-    fop <- eval(my.expr)
-    x <- fop$x1
-    feasible <- fop$feasible1
-    crash <- fop$crash1
-    list(crash = crash, feasible = feasible, x = x)
+    if(solver == 'rrelaxiv'){
+      if(requireNamespace('rrelaxiv', quietly = TRUE)) {
+        rout <- rrelaxiv::RELAX_IV(startnodes = as.integer(startn),
+                                   endnodes = as.integer(endn),
+                                   arccosts = as.integer(cost),
+                                   arccapacity = as.integer(ucap),
+                                   supply = as.integer(b))
+        return.obj <- list(crash = 0,
+                           feasible = !all(rout == 0),
+                           x = rout)
+        return(return.obj)
+      } else {
+        solver = 'rlemon'
+        warning('Package rrelaxiv not available, using rlemon instead.')
+      }
+    }
+    if(solver == 'rlemon'){
+      lout <- rlemon::MinCostFlow(arcSources = as.integer(startn),
+                                  arcTargets = as.integer(endn),
+                                  arcCapacities = as.integer(ucap),
+                                  arcCosts = as.integer(cost),
+                                  nodeSupplies = as.integer(b),
+                                  numNodes = max(c(startn, endn)),
+                                  algorithm = 'CycleCancelling')
+      return.obj <- list(crash = 0,
+                         feasible = !all(lout[[1]] == 0),
+                         x = lout[[1]])
+      return(return.obj)
+    }else{
+      stop(
+        'Argument to solver not recognized: please use one of rlemon and rrelaxiv')
+    }
   }
 
-  #output<-rcbalance::callrelax(net)
   output<-callrelax(net)
 
   if (output$feasible!=1){

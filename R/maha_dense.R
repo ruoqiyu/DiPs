@@ -1,4 +1,4 @@
-maha_dense<-function (z, X, exact=NULL, nearexact=NULL, penalty=100){
+maha_dense<-function (z, X, exact=NULL, nearexact=NULL, penalty=100, matrix=FALSE){
   Xmatrix<-function(x){
     if (is.vector(x) || is.factor(x)) x<-matrix(x,nrow=length(z))
 
@@ -51,8 +51,6 @@ maha_dense<-function (z, X, exact=NULL, nearexact=NULL, penalty=100){
   }
 
   X<-Xmatrix(X)
-  if (is.vector(X)) X<-matrix(X,length(z),1)
-  stopifnot(is.matrix(X))
   n <- dim(X)[1]
   rownames(X) <- 1:n
   k <- dim(X)[2]
@@ -69,8 +67,7 @@ maha_dense<-function (z, X, exact=NULL, nearexact=NULL, penalty=100){
 
   z<-z[o]
   p<-p[o]
-  if (is.vector(X)) X<-matrix(X,length(z),1)
-  X<-X[o,]
+  X<-X[o,,drop=FALSE]
   if (!is.null(nearexact)) nearexact<-nearexact[o]
 
   #Must have treated first
@@ -78,29 +75,26 @@ maha_dense<-function (z, X, exact=NULL, nearexact=NULL, penalty=100){
     o<-order(1-z)
     z<-z[o]
     p<-p[o]
-    if (is.vector(X)) X<-matrix(X,length(z),1)
-    X<-X[o,]
+    X<-X[o,,drop=FALSE]
     if (!is.null(exact)) exact<-exact[o]
     if (!is.null(nearexact)) nearexact<-nearexact[o]
   }
 
-  if (is.vector(X)) X<-matrix(X,length(z),1)
-  for (j in 1:k) X[, j] <- rank(X[, j])
+
+  for (j in 1:k) X[,j] <- rank(X[,j])
   cv <- cov(X)
   vuntied <- var(1:n)
   rat <- sqrt(vuntied/diag(cv))
   cv <- diag(rat) %*% cv %*% diag(rat)
-  LL<-chol(cv)
-  #icov <- MASS::ginv(cv)
-  out <- matrix(NA, m, n - m)
-  Xc <- X[z == 0, ]
-  Xt <- X[z == 1, ]
-  if (is.vector(Xc)) Xc<-matrix(Xc,ncol = 1)
-  if (is.vector(Xt)) Xt<-matrix(Xt,ncol = 1)
+#  LL<-chol(cv)
+  icov <- MASS::ginv(cv)
+  out <- matrix(NA, m, n-m)
+  Xc <- X[z == 0,,drop=FALSE]
+  Xt <- X[z == 1,,drop=FALSE]
   rownames(out) <- rownames(X)[z == 1]
   colnames(out) <- rownames(X)[z == 0]
-  for (i in 1:m) out[i, ] <- mvnfast::maha(Xc,t(as.matrix(Xt[i,])),LL,isChol=TRUE)
-  #for (i in 1:m) out[i, ] <- stats::mahalanobis(Xc,t(as.matrix(Xt[i,])),icov,inverted = T)
+#  for (i in 1:m) out[i, ] <- mvnfast::maha(Xc,t(as.matrix(Xt[i,])),LL,isChol=TRUE)
+  for (i in 1:m) out[i, ] <- stats::mahalanobis(Xc,t(as.matrix(Xt[i,])),icov,inverted = T)
   if (!is.null(exact)){
     dif <- outer(exact[z == 1], exact[z == 0], "!=")
     out[dif] <- Inf
@@ -110,14 +104,18 @@ maha_dense<-function (z, X, exact=NULL, nearexact=NULL, penalty=100){
     dif <- outer(nearexact[z == 1], nearexact[z == 0], "!=")
     out <- out + dif * penalty
   }
-  distance<-t(out)
-  dim(distance)<-c(1,m*(n-m))
-  distance<-as.vector(distance)
-  start<-rep(1:m,each=n-m)
-  end<-rep((m+1):n,m)
-  d0<-distance
-  distance<-distance[which(d0<Inf)]
-  start<-start[which(d0<Inf)]
-  end<-end[which(d0<Inf)]
-  list(d=distance,start=start,end=end)
+
+  if (matrix) return (out)
+  else{
+    distance<-t(out)
+    dim(distance)<-c(1,m*(n-m))
+    distance<-as.vector(distance)
+    start<-rep(1:m,each=n-m)
+    end<-rep((m+1):n,m)
+    d0<-distance
+    distance<-distance[which(d0<Inf)]
+    start<-start[which(d0<Inf)]
+    end<-end[which(d0<Inf)]
+    return (list(d=distance,start=start,end=end))
+  }
 }

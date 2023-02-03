@@ -3,7 +3,7 @@
 \title{Creates a robust Mahalanobis distance for matching based on a dense network.}
 \usage{
 maha_dense(z, X,  exact=NULL,
-nearexact=NULL, penalty=100)
+nearexact=NULL, penalty=100, matrix=FALSE)
 }
 \arguments{
 \item{z}{ A vector whose ith coordinate is 1 for a treated unit and is 0 for a control. }
@@ -11,6 +11,7 @@ nearexact=NULL, penalty=100)
 \item{exact}{ If not NULL, then a vector of length(z)=length(p) giving variable that need to be exactly matched. }
 \item{nearexact}{ If not NULL, then a vector of length length(z) giving variable that need to be exactly matched. }
 \item{penalty}{ The penalty for a mismatch on nearexact.}
+\item{matrix}{ A boolean to indicate whether the distance output will have data type matrix (if matrix=TRUE) or list (if matrix=FALSE).}
 }
 
 \value{
