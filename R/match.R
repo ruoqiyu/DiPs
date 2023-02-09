@@ -1,13 +1,13 @@
-match<-function(z,dist,dat,p=rep(1,length(z)),exact=NULL,fine=rep(1,length(z)),ncontrol=1,penalty=round(max(dist$d)*1000),s.cost=100,subX=NULL){
+match<-function(z,dist,dat,p=rep(1,length(z)),exact=NULL,fine=rep(1,length(z)),ncontrol=1,penalty=ifelse(is.matrix(dist),round(max(dist)*1000),round(max(dist$d)*1000)),s.cost=100,subX=NULL){
   #Check input
   stopifnot(is.data.frame(dat))
   stopifnot(is.vector(z))
-  if (is.factor(fine)){
+  if (!is.numeric(fine)){
+    if (!is.factor(fine)) fine=as.factor(fine)
     levels(fine)<-1:nlevels(fine)
-    fine<-as.integer(fine)
+    fine<-as.numeric(fine)
   }
-  stopifnot(is.vector(fine))
-  fine<-as.numeric(fine)
+
   stopifnot(all((z==1)|(z==0)))
   stopifnot((ncontrol==round(ncontrol))&(ncontrol>=1))
   n<-length(z)
@@ -62,10 +62,6 @@ match<-function(z,dist,dat,p=rep(1,length(z)),exact=NULL,fine=rep(1,length(z)),n
   }
 
   #do match
-  if (!requireNamespace("optmatch", quietly=TRUE)) {
-    stop("Error: package optmatch (>= 0.9-1) not loaded.  To run match command, you must install optmatch first and agree to the terms of its license.")
-  }
-
   net<-net(z,dist,ncontrol,fine,penalty,s.cost,subX)
   if (any(net$cost==Inf)) net$cost[net$cost==Inf]<-2*max(net$cost[net$cost!=Inf])
 
