@@ -2,8 +2,9 @@
 \alias{net}
 \title{Optimal near-fine match from a distance matrix.}
 \usage{
-net(z, dist, ncontrol=1, fine=rep(1,length(z)),
-penalty=round(max(dist$d)*100), s.cost=100, subX=NULL)
+net(z,dist,ncontrol=1,fine=rep(1,length(z)),
+penalty=ifelse(is.matrix(dist),round(max(dist)*1000),round(max(dist$d)*1000)),
+s.cost=100,subX=NULL)
 }
 \arguments{
 \item{z}{ A vector whose ith coordinate is 1 for a treated unit and is 0 for a control. }

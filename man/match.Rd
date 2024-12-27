@@ -3,7 +3,8 @@
 \title{Minimum-distance near-fine matching.}
 \usage{
 match(z,dist,dat,p=rep(1,length(z)),exact=NULL,fine=rep(1,length(z)),ncontrol=1,
-penalty=round(max(dist$d)*1000),s.cost=100,subX=NULL)
+penalty=ifelse(is.matrix(dist),round(max(dist)*1000),round(max(dist$d)*1000)),
+s.cost=100,subX=NULL)
 }
 \arguments{
 \item{z}{ A vector whose ith coordinate is 1 for a treated unit and is 0 for a control.}
